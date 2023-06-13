@@ -122,7 +122,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private boolean orientationCorrected;   // Has the picture's orientation been corrected
     private boolean allowEdit;              // Should we allow the user to crop the image.
 
-    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE };
+    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_MEDIA_IMAGES };
 
     public CallbackContext callbackContext;
     private int numPics;
@@ -145,9 +145,11 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      */
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         this.callbackContext = callbackContext;
-
-        this.applicationId = cordova.getContext().getPackageName();
+        //Adding an API to CoreAndroid to get the BuildConfigValue
+        //This allows us to not make this a breaking change to embedding
+        this.applicationId = (String) BuildHelper.getBuildConfigValue(cordova.getActivity(), "APPLICATION_ID");
         this.applicationId = preferences.getString("applicationId", this.applicationId);
+
 
         if (action.equals(TAKE_PICTURE_ACTION)) {
             this.srcType = CAMERA;
@@ -193,8 +195,10 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 }
                 else if ((this.srcType == PHOTOLIBRARY) || (this.srcType == SAVEDPHOTOALBUM)) {
                     // FIXME: Stop always requesting the permission
-                    if(!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                        PermissionHelper.requestPermission(this, SAVE_TO_ALBUM_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
+
+                    String permissionToCheck = android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? Manifest.permission.READ_MEDIA_IMAGES : Manifest.permission.READ_EXTERNAL_STORAGE;
+                    if(!PermissionHelper.hasPermission(this, permissionToCheck)) {
+                        PermissionHelper.requestPermission(this, SAVE_TO_ALBUM_SEC, permissionToCheck);
                     } else {
                         this.getImage(this.srcType, destType);
                     }
@@ -276,7 +280,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
         } else if (takePicturePermission) {
             PermissionHelper.requestPermissions(this, TAKE_PIC_SEC,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE});
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_MEDIA_IMAGES});
         } else {
             PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
         }
