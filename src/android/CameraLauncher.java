@@ -84,6 +84,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private static final int PICTURE = 0;               // allow selection of still pictures only. DEFAULT. Will return format specified via DestinationType
     private static final int VIDEO = 1;                 // allow selection of video only, ONLY RETURNS URL
     private static final int ALLMEDIA = 2;              // allow selection from all media types
+    private static final int RECOVERABLE_DELETE_REQUEST = 3;  // Result of Recoverable Security Exception
 
     private static final int JPEG = 0;                  // Take a picture of type JPEG
     private static final int PNG = 1;                   // Take a picture of type PNG
@@ -134,7 +135,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private String croppedFilePath;
     private ExifHelper exifData;            // Exif data from source
     private String applicationId;
-
+    private Uri pendingDeleteMediaUri;
 
     /**
      * Executes the request and returns PluginResult.
@@ -959,6 +960,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             } else {
                 this.failPicture("Selection did not complete!");
             }
+        } else if(requestCode == RECOVERABLE_DELETE_REQUEST){
+          // retry media store deletion ...
+          ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+          try {
+            contentResolver.delete(this.pendingDeleteMediaUri, null, null);
+          } catch (Exception e) {
+            LOG.e(LOG_TAG, "Unable to delete media store file after permission was granted");
+          }
+          this.pendingDeleteMediaUri = null;
         }
     }
 
